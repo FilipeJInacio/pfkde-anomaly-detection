@@ -9,83 +9,55 @@ from astropy import units as u
 from astropy.coordinates import TEME, ITRS, CartesianDifferential, CartesianRepresentation
 from astropy.time import Time
 from sgp4.api import Satrec
-
-def TLE_to_pos_vel(TLE1, TLE2, jd, jf):
-    # Create a satellite object
-
-    satellite = Satrec.twoline2rv(TLE1, TLE2)
-
-    e, r, v = satellite.sgp4(jd, jf)
-
-    # Create a CartesianDifferential object with the velocity
-    velocity_diff = CartesianDifferential(*v, unit=u.km/u.s)
-
-    # Create a CartesianRepresentation object with the position and velocity
-    cart_rep = CartesianRepresentation(*r, unit=u.km, differentials=velocity_diff)
-
-    # Create a TEME coordinate object with the CartesianRepresentation
-    teme_p = TEME(cart_rep, obstime=Time(jd+jf, format='jd'))
-
-    # Convert the TEME coordinates to ITRS
-    itrf_p = teme_p.transform_to(ITRS(obstime=Time(jd+jf, format='jd')))
-
-    return itrf_p.cartesian.xyz.to(u.km), itrf_p.velocity.d_xyz.to(u.km/u.s)
-
-def set_3d_axes_scale_equal(ax: plt.Axes) -> None:
-    x_limits = ax.get_xlim3d()
-    y_limits = ax.get_ylim3d()
-    z_limits = ax.get_zlim3d()
-
-    x_range = abs(x_limits[1]-x_limits[0])
-    x_middle = np.mean(x_limits)
-    y_range = abs(y_limits[1]-y_limits[0])
-    y_middle = np.mean(y_limits)
-    z_range = abs(z_limits[1]-z_limits[0])
-    z_middle = np.mean(z_limits)
-
-    plot_radius = 0.5*np.max([x_range, y_range, z_range])
-
-    ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
-    ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
-    ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
-
-
-# field names
-fields = "Start Time [UTC], End Time [UTC]\n"
-
-# name of csv file
-csvFile = open("data/eclipses_40014.csv", 'w')
-csvFile.write(fields)
-
-# Open the JSON file
-f = open('data/40014_TLE.json')
-
-# returns JSON object as a dictionary
-jsonData = json.load(f)
-
-# Load the trajectory configuration
-with open(r"data/trajectory_bugsat.yml") as fp:
-    yaml = YAML()
-    yamldata = yaml.load(fp)
+import logging
 
 # Earth Radius [km]
 occultRadius = 6378
 # sun radius [km]
 sourceRadius = 696340.0
 
-for i, line in enumerate(jsonData):
-    print("Processing line", i)
-    e0 = tempo.Epoch(line["EPOCH"]+" UTC")
-    # Check if this is not the last line
-    if i < len(jsonData) - 1:
-        # Access the next line
-        ef = tempo.Epoch(jsonData[i+1]["EPOCH"]+" UTC")
-    else:
-        break
-    # Compute the position and velocity of the satellite at the initial epoch
-    daysAndFraction = e0.jdPair(tempo.TimeScale.TT, tempo.JulianDay.JD)
-    pos_vel = TLE_to_pos_vel(line["TLE_LINE1"], line["TLE_LINE2"], daysAndFraction.day, daysAndFraction.fraction)
+logger = logging.getLogger()
+formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+handler = logging.FileHandler("data/log.txt", mode='a')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
+def TLE_to_pos_vel(TLE1, TLE2, jd, jf):
+    satellite = Satrec.twoline2rv(TLE1, TLE2) # Give keplerian elements to create the satellite object
+    e, r, v = satellite.sgp4(jd, jf)
+
+    if e != 0:
+        logger.error(f"Error in SGP4 propagation: {e}\n TLE1: {TLE1}\n TLE2: {TLE2}\n JD: {jd}\n JF: {jf}")
+
+    velocity_diff = CartesianDifferential(*v, unit=u.km/u.s)
+    cart_rep = CartesianRepresentation(*r, unit=u.km, differentials=velocity_diff)
+    teme_p = TEME(cart_rep, obstime=Time(jd+jf, format='jd'))
+    itrf_p = teme_p.transform_to(ITRS(obstime=Time(jd+jf, format='jd')))
+
+    return itrf_p.cartesian.xyz.to(u.km), itrf_p.velocity.d_xyz.to(u.km/u.s) # change to International Terrestrial Reference System
+
+# CSV where the data will be saved
+csvFile = open("data/eclipses_40014.csv", 'w')
+csvFile.write("Start Time [UTC], End Time [UTC]\n")
+
+# Open the JSON file with the TLE data
+f = open('data/40014_TLE.json')
+jsonData = json.load(f)
+
+# Load the GODOT trajectory configuration
+with open(r"data/trajectory_bugsat.yml") as fp:
+    yaml = YAML()
+    yamldata = yaml.load(fp)
+
+for i, (current, nxt) in enumerate(zip(jsonData, jsonData[1:])):
+    e0 = tempo.Epoch(current["EPOCH"] + " UTC") # Auto converts to TAI
+    e0_JD = e0.jdPair(tempo.TimeScale.TT, tempo.JulianDay.JD) # Convert to Julian Date
+    ef = tempo.Epoch(nxt["EPOCH"] + " UTC")
+
+    # Compute the position and velocity of the satellite at the initial epoch
+    pos_vel = TLE_to_pos_vel(current["TLE_LINE1"], current["TLE_LINE2"], e0_JD.day, e0_JD.fraction)
+
+    # Configure GODOT trajectory
     yamldata['timeline'][0]['epoch'] = e0.calStr("UTC", 6)
     yamldata['timeline'][0]['state'][0]['value']['pos_x'] = str(pos_vel[0][0])
     yamldata['timeline'][0]['state'][0]['value']['pos_y'] = str(pos_vel[0][1])
@@ -99,11 +71,8 @@ for i, line in enumerate(jsonData):
     with open("data/trajectory_bugsat.yml", "w") as out:
         yaml.dump(yamldata, out)
 
-    # Load the universe configuration and create the universe object
     uniConfig = cosmos.util.load_yaml('data/universe_bugsat.yml')
     uni = cosmos.Universe(uniConfig)
-
-    # Load the trajectory configuration and create the trajectory object using the universe object
     traConfig = cosmos.util.load_yaml('data/trajectory_bugsat.yml')
     tra = cosmos.Trajectory(uni, traConfig)
 
