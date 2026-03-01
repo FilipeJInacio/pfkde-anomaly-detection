@@ -31,25 +31,6 @@ def TLE_to_pos_vel(TLE1, TLE2, jd, jf):
 
     return itrf_p.cartesian.xyz.to(u.km), itrf_p.velocity.d_xyz.to(u.km/u.s)
 
-# field names
-fields = "Start Time [UTC], End Time [UTC]\n"
-
-# name of csv file
-csvFile = open("eclipses_40014.csv", 'w')
-csvFile.write(fields)
-
-# Open the JSON file
-f = open('40014_TLE.json')
-
-# returns JSON object as a dictionary
-jsonData = json.load(f)
-
-# Load the trajectory configuration
-with open(r"trajectory_bugsat.yml") as fp:
-    yaml = YAML()
-    yamldata = yaml.load(fp)
-
-
 def set_3d_axes_scale_equal(ax: plt.Axes) -> None:
     x_limits = ax.get_xlim3d()
     y_limits = ax.get_ylim3d()
@@ -67,6 +48,25 @@ def set_3d_axes_scale_equal(ax: plt.Axes) -> None:
     ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
+
+# field names
+fields = "Start Time [UTC], End Time [UTC]\n"
+
+# name of csv file
+csvFile = open("data/eclipses_40014.csv", 'w')
+csvFile.write(fields)
+
+# Open the JSON file
+f = open('data/40014_TLE.json')
+
+# returns JSON object as a dictionary
+jsonData = json.load(f)
+
+# Load the trajectory configuration
+with open(r"data/trajectory_bugsat.yml") as fp:
+    yaml = YAML()
+    yamldata = yaml.load(fp)
 
 # Earth Radius [km]
 occultRadius = 6378
@@ -96,15 +96,15 @@ for i, line in enumerate(jsonData):
     yamldata['timeline'][1]['point']['epoch'] = (ef+1).calStr("UTC", 6)
 
     # Save the trajectory configuration
-    with open(r"trajectory_bugsat.yml", "w") as out:
+    with open("data/trajectory_bugsat.yml", "w") as out:
         yaml.dump(yamldata, out)
 
     # Load the universe configuration and create the universe object
-    uniConfig = cosmos.util.load_yaml('universe_bugsat.yml')
+    uniConfig = cosmos.util.load_yaml('data/universe_bugsat.yml')
     uni = cosmos.Universe(uniConfig)
 
     # Load the trajectory configuration and create the trajectory object using the universe object
-    traConfig = cosmos.util.load_yaml('trajectory_bugsat.yml')
+    traConfig = cosmos.util.load_yaml('data/trajectory_bugsat.yml')
     tra = cosmos.Trajectory(uni, traConfig)
 
     # The trajectory evaluation: in this phase the timeline elements are processed and propagation arcs are computed
@@ -131,7 +131,7 @@ for i, line in enumerate(jsonData):
         if eclipses[e] < 0:
 
             start = grid[e]
-            csvFile.write(str(grid[e].calStr("UTC", 6)) + ", ")
+            csvFile.write(str(grid[e].calStr("UTC", 6)) + ",")
             while e < len(eclipses) and eclipses[e] < 0:
                 e += 1
             if e < len(eclipses):  # Check if e is within the range after increment

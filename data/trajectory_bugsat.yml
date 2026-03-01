@@ -32,7 +32,7 @@ setup:
 timeline:
 - type: control
   name: start
-  epoch: 2014-08-26T08:04:26.952383 UTC
+  epoch: 2024-11-18T12:49:35.113152 UTC
   state:   # initial state model definition for propagated quantities 
   - name: SC_center     # name of the quantity to set initial model for
     body: Earth     # central body used for both initial state and initial center of integration for propagated points. If body is given, point and coi shall not be. 
@@ -41,15 +41,15 @@ timeline:
     axes: ITRF     # axes of the initial state for propagated points
     dynamics: EMS_combined     # dynamic model for the propagation of the quantity
     value:     # using state vector for STELLA
-      pos_x: 5535.05788077755 km
-      pos_y: 4229.891301743644 km
-      pos_z: 502.0193320451615 km
-      vel_x: 0.4936465567270716 km/s
-      vel_y: -1.5850575679460235 km/s
-      vel_z: 7.455493239888767 km/s
+      pos_x: -3624.794042375673 km
+      pos_y: 5853.451794542104 km
+      pos_z: 520.8466092699396 km
+      vel_x: 1.6391253112956292 km/s
+      vel_y: 0.3495188477436386 km/s
+      vel_z: 7.513527150292703 km/s
 
 - type: point
   name: end
   input: SC
   point:
-    epoch: 2014-08-29T08:31:35.109760 UTC
+    epoch: 2024-11-18T20:47:32.483104 UTC

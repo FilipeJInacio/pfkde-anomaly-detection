@@ -46,10 +46,10 @@ parameters:
     value: 22 kg 
   - name: SC_cd
     type: Parameter
-    value: '2.0'  # between 2.0 and 2.2 # Aerodynamic drag coefficient of the spacecraft
+    value: '2.2'  # between 2.0 and 2.2 # Aerodynamic drag coefficient of the spacecraft
   - name: SC_cr
     type: Parameter
-    value: '1.131' # Solar radiation pressure (SRP) reflectivity coefficient # between 1.0 (perfect absorber) and 2.0 (perfect reflector)
+    value: '1.2' # Solar radiation pressure (SRP) reflectivity coefficient # between 1.0 (perfect absorber) and 2.0 (perfect reflector)
 #! parameters
 
 #! spacetime
@@ -90,11 +90,11 @@ spacecraft:
     # Solar radiation modelling surface properties
     srp:
       area: 0.1375 m^2 
-      cr: 1.131 # Reflectivity coefficient
+      cr: 1.2 # Reflectivity coefficient
     # Drag modelling surface properties
     drag:
       area: 0.1375 m^2 
-      cd: 2.0 # Drag coefficient
+      cd: 2.2 # Drag coefficient
 #! spacecraft
 
 #! atmosphere

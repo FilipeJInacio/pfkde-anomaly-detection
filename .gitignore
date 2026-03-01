@@ -1,1 +1,3 @@
-data/*
+data/*.csv
+data/*.json
+data/*.mat
