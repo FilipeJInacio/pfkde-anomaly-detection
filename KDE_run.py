@@ -1,9 +1,79 @@
-from KDE import GridKernelDensityEstimation, Dataset, load_data
+from random import sample
+
+from KDE import GridKernelDensityEstimation, Dataset, Point
+import scipy.io
+import numpy as np
+
+def load_data():
+    data = scipy.io.loadmat('data/40014_dataset.mat')
+    absolute_time = data['absolute_time'][0].astype(np.int64)
+    value = data['value'][0].astype(np.int64)
+    phase = data['phase'][0].astype(np.int64)
+    #! Not using phase_normalized because the change in period length is 5 seconds during the 1 year period, which is not significant enough to affect the results
+    #! The implementation is not very optimized already, and having to search the correct bin for each point in the phase_normalized would make it even worse
+    #phase_normalized = data['phase_normalized'][0].astype(np.float64)
+    period_length = data['period_length'][0].astype(np.int64)
+    period_count = data['period_count'][0].astype(np.int64)
+    max_length = min(np.max(period_length), np.max(phase) + 1)
+    return [Point(phase[i], value[i], absolute_time[i], period_count[i], False, value[i]) for i in range(len(phase))], max_length
+
+def add_synthetic_anomalies(dataset, max_length, bin_number, k):
+
+    bins = [[] for _ in range(bin_number)]
+
+    # Preliminary dataset verification
+    for i in range(len(dataset)):
+        idx = min(int(dataset[i].phase / max_length * bin_number), bin_number - 1)
+        bins[idx].append(i)
+
+    # Verify if all the bins have at least one point, otherwise the algorithm will fail
+    for bin in bins:
+        if len(bin) < 1:
+            raise ValueError("One of the bins has no points, consider reducing the number of bins or check the data distribution.")
+        if len(bin) == 1: # In case there is only 1 point, we need to duplicate it to be able to create an anomaly
+            i = bin[0]
+            dataset.append(Point(dataset[i].phase, dataset[i].y, dataset[i].t, dataset[i].period_count, False, dataset[i].y))
+            print(f"Bin with only 1 point found at index {i}, duplicating the point to create an anomaly.")
+
+    # Sort data by dataset[i].t
+    dataset.sort(key=lambda p: p.t)
+
+    # Recalculate because we might have added points
+    bins = [[] for _ in range(bin_number)]
+    for i in range(len(dataset)):
+        idx = min(int(dataset[i].phase / max_length * bin_number), bin_number - 1)
+        bins[idx].append(i)
+
+    for bin in bins:
+        values = np.array([dataset[i].y for i in bin])
+        p1, p99 = np.percentile(values, [1, 99]) 
+        idx_low = np.argmin(np.abs(values - p1)) 
+        idx_high = np.argmin(np.abs(values - p99))
+
+        if idx_low == idx_high:
+            idx_high = (idx_low + 1) % len(bin) # Just to make sure we have two different points, the specific choice does not matter much
+
+        dataset[bin[idx_low]].is_true_anomaly = True
+        dataset[bin[idx_high]].is_true_anomaly = True
+        spread = abs(dataset[bin[idx_high]].y - dataset[bin[idx_low]].y)
+        mean_shift = max([spread / k, 10])
+        variance = max([np.std(values) / k, 10]) # 0.01 V minimum
+
+        dataset[bin[idx_low]].y += int(np.random.normal(-mean_shift, variance))
+        dataset[bin[idx_high]].y += int(np.random.normal(mean_shift, variance))
+
+        # Guarantee that the lower anomaly is lower than the higher anomaly, in case the random shift made them swap
+        if dataset[bin[idx_low]].y > dataset[bin[idx_high]].y:
+            dataset[bin[idx_low]].y, dataset[bin[idx_high]].y = dataset[bin[idx_high]].y, dataset[bin[idx_low]].y
+
+    return dataset
 
 if __name__ == "__main__":
-    dataset = Dataset(load_data())
+    dataset, max_length = load_data()
+    dataset = add_synthetic_anomalies(dataset, max_length, 100, 8)
+    dataset = Dataset(dataset)
     epochs = 50
-    test_sets = dataset/epochs # Split the test set into 90 equal parts
+    test_sets = dataset/epochs # Split the test set into 50 equal parts
     
     def bandwidth(window):
         window.sort(key=lambda p: p.y)
@@ -16,10 +86,10 @@ if __name__ == "__main__":
 
     threshold = 8*10**-5
     
-    model1 = GridKernelDensityEstimation(y_bottom=10500,
-                                        y_upper=13000,
-                                        precision=200,
-                                        bandwidth=bandwidth, 
+    model1 = GridKernelDensityEstimation(y_bottom=10500,                    # y bottom limit for the plot
+                                        y_upper=13000,                      # y upper limit for the plot
+                                        precision=200,                      # how many points per KDE
+                                        bandwidth=bandwidth,                #
                                         outlier_threshold=threshold, 
                                         outlier_omission=threshold*10**-2, 
                                         aggregation_window=15, 

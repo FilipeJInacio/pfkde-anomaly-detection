@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.stats
-import scipy.io
 from enum import Enum
 import copy
 from typing import List
@@ -11,13 +10,6 @@ from sklearn.metrics import confusion_matrix
 
 np.random.seed(42)
 
-# to implement:
-
-# parallelism with other algorithms # e.g. derivatives + kde diff
-# clustering for 2 segment detection
-# inverse kde for user feedback  # i think there is no need for this
-# early anomaly detection recognition
-# re-evaluate points
 
 
 class AnomalyTypes(Enum):
@@ -32,16 +24,17 @@ class AnomalyEntity():
         self.context = context
 
 class Point:
-    def __init__(self, x, y, t, period_count, is_anomaly):
-        self.x = x
+    def __init__(self, phase, y, t, period_count, is_anomaly, y_original):
+        self.phase = phase
         self.y = y
         self.t = t
         self.period_count = period_count
         self.is_true_anomaly = is_anomaly
+        self.y_original = y_original
         self.anomaly_list = []
 
     def __repr__(self):
-        return f"(x={self.x}, y={self.y}, t={self.t}, period_count={self.period_count}, is_true_anomaly={self.is_true_anomaly})"
+        return f"(phase={self.phase}, y={self.y}, t={self.t}, period_count={self.period_count}, is_true_anomaly={self.is_true_anomaly}, y_original={self.y_original})"
 
     def add_anomaly(self, anomaly):
         self.anomaly_list.append(anomaly)
@@ -60,10 +53,11 @@ class Point:
 
 class Period:
     def __init__(self, points: List[Point]):
-        self.points = points
+        self.points = points     # The idea is that there is linking. If the class point is changed, the period of the point has the point updated
+        self.period_count = points[0].period_count if points else -1
 
     def __repr__(self):
-        return f"Period with {len(self.points)} points, period_count={self.points[0].period_count}"
+        return f"Period with {len(self.points)} points, period_count={self.period_count}"
 
 class Dataset:
     def __init__(self, time_series: List[Point]):
@@ -162,96 +156,7 @@ class Dataset:
         return count
 
 
-def load_data():
-    data = scipy.io.loadmat('data/40014_dataset.mat')
-    absolute_time = np.array([int(i) for i in data['absolute_time'][0]]) 
-    value = np.array([int(i) for i in data['value'][0]]) 
-    phase = np.array([int(i) for i in data['phase'][0]]) 
-    phase_normalized = np.array([i for i in data['phase_normalized'][0]], dtype=np.float32)
-    period_length = np.array([int(i) for i in data['period_length'][0]])
-    period_count = np.array([int(i) for i in data['period_count'][0]])
 
-    raise ValueError("Data loading is currently disabled. Please enable it to load the dataset.")
-
-    mask = value > 10500
-    absolute_time = absolute_time[mask]
-    value = value[mask]
-    phase = phase[mask]
-    phase_normalized = phase_normalized[mask]
-    period_length = period_length[mask]
-    period_count = period_count[mask]
-    
-    # add anomalies
-    # is_anomaly = []
-    # for i in range(len(y_t)):
-    #     if np.random.rand() < 0.002:  # 0.2% chance of anomaly
-    #         y_t[i] += np.random.normal(0, 1000)  # add noise to the point
-    #         is_anomaly.append(True)
-    #     else:
-    #         is_anomaly.append(False)
-
-    is_anomaly = []
-    bin_number = 100
-    bins = [[] for _ in range(bin_number)]
-    bins_limits = [[i/bin_number*5783, (i+1)/bin_number*5783] for i in range(bin_number)]
-
-    for i in range(len(absolute_time)):
-        placed = False
-        for b in range(bin_number):
-            if bins_limits[b][0] <= x_t[i] < bins_limits[b][1]:
-                bins[b].append(i)
-                placed = True
-                break
-        if not placed:
-            bins[-1].append(i)
-
-    means = [0 for _ in range(bin_number)]
-    std = [0 for _ in range(bin_number)]
-    quartiles = [[0,0] for _ in range(bin_number)] 
-    quartiles_index = [[0,0] for _ in range(bin_number)]
-    for b in range(bin_number):
-        bin_values = [y_t[i] for i in bins[b]]
-        means[b] = np.mean(bin_values)
-        std[b] = np.std(bin_values)
-        quartiles[b] = [np.percentile(bin_values, 1), np.percentile(bin_values, 99)]
-        quartiles_index[b] = [np.argmin(np.abs(bin_values - np.percentile(bin_values, 1))), np.argmin(np.abs(bin_values - np.percentile(bin_values, 99)))]
-
-    #plt.figure(figsize=(10,6))
-    k = 8
-    #print("Chance of a anomaly:", bin_number*2*100/len(y_t), "%")
-    
-    is_anomaly = [False for _ in range(len(y_t))]
-    for b in range(bin_number):
-
-        is_anomaly[bins[b][quartiles_index[b][0]]] = True
-        is_anomaly[bins[b][quartiles_index[b][1]]] = True
-
-        #plt.scatter(x_t[bins[b][quartiles_index[b][0]]], y_t[bins[b][quartiles_index[b][0]]], color='red')
-        #plt.scatter(x_t[bins[b][quartiles_index[b][1]]], y_t[bins[b][quartiles_index[b][1]]], color='green')
-
-        with open("synthetic_anomalies1.txt", "a") as f:
-            f.write(f"{x_t[bins[b][quartiles_index[b][0]]]}; {y_t[bins[b][quartiles_index[b][0]]]}\n")
-
-        with open("synthetic_anomalies2.txt", "a") as f:
-            f.write(f"{x_t[bins[b][quartiles_index[b][1]]]}; {y_t[bins[b][quartiles_index[b][1]]]}\n")
-
-        y_t[bins[b][quartiles_index[b][0]]] = y_t[bins[b][quartiles_index[b][0]]] + np.random.normal(-(y_t[bins[b][quartiles_index[b][1]]]-y_t[bins[b][quartiles_index[b][0]]])/k, std[b]/k)
-        y_t[bins[b][quartiles_index[b][1]]] = y_t[bins[b][quartiles_index[b][1]]] + np.random.normal((y_t[bins[b][quartiles_index[b][1]]]-y_t[bins[b][quartiles_index[b][0]]])/k, std[b]/k)
-
-        with open("synthetic_anomalies3.txt", "a") as f:
-            f.write(f"{x_t[bins[b][quartiles_index[b][0]]]}; {y_t[bins[b][quartiles_index[b][0]]]}\n")
-
-        with open("synthetic_anomalies4.txt", "a") as f:
-            f.write(f"{x_t[bins[b][quartiles_index[b][1]]]}; {y_t[bins[b][quartiles_index[b][1]]]}\n")
-
-        #plt.scatter(x_t[bins[b][quartiles_index[b][0]]], y_t[bins[b][quartiles_index[b][0]]], color='black')
-        #plt.scatter(x_t[bins[b][quartiles_index[b][1]]], y_t[bins[b][quartiles_index[b][1]]], color='yellow')
-
-    #plt.show()
-
-    print("Started")
-
-    return [Point(x_t[i], y_t[i], actual_t[i], period_count[i], is_anomaly[i]) for i in range(len(x_t))]
 
 class GridKernelDensityEstimation():
     def __init__(self, y_bottom, y_upper, precision, bandwidth, outlier_threshold, outlier_omission, aggregation_window, memory_size, min_points_for_PDF, min_aggregation_window_points_PDF, grid_size):
