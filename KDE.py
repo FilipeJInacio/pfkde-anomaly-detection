@@ -1,3 +1,4 @@
+from cv2 import phase
 import numpy as np
 import scipy.stats
 from enum import Enum
@@ -235,9 +236,12 @@ class PFKDE():
 
             for point in points_to_update:
                 self.bins[point.phase].append(point) # Add point to memory
-
-            for x in range(self.number_of_bins): # Update all KDEs. Because the new points can be in any of the KDEs' windows, we need to update them all.
-                self.update_pdf(x)
+                # Update all points in Aggregation window range
+                for j in range(-self.aggregation_window_size, self.aggregation_window_size+1):
+                    if point.phase+j < self.number_of_bins:
+                        self.update_pdf(point.phase+j) # The addition of the point doesn't only affect the KDE of its own phase, but also the KDEs of the phases in the aggregation window range
+                    else:
+                        self.update_pdf(point.phase+j-self.number_of_bins)
 
     def plot_heatmap_with_points(self, dataset: Dataset, fig_number, save, frame):
         y_value = np.linspace(self.y_bottom, self.y_upper, self.precision)
