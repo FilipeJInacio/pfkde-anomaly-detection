@@ -1,6 +1,4 @@
-from random import sample
-
-from KDE import GridKernelDensityEstimation, Dataset, Point
+from KDE import PFKDE, Dataset, Point
 import scipy.io
 import numpy as np
 
@@ -75,7 +73,7 @@ if __name__ == "__main__":
     epochs = 50
     test_sets = dataset/epochs # Split the test set into 50 equal parts
     
-    def bandwidth(window):
+    def bandwidth_function(window):
         window.sort(key=lambda p: p.y)
         max_gap = max(window[i+1].y - window[i].y for i in range(len(window)-1))
         if window[-1].y == window[0].y:
@@ -84,22 +82,31 @@ if __name__ == "__main__":
         bd = 0.2 * len(window) ** (-1 / 5) * gap_factor ** 3
         return bd
 
+    def weight_function(window, center_phase, aggregation_window_size, number_of_bins):
+        weights = []
+        for point in window: 
+            d = abs(point.phase - center_phase)     # Further from center, lower the weight
+            d = min(d, number_of_bins - d)          # because of the phasefold, the end is the start and the start is the end
+            weights.append(aggregation_window_size - d + 1) 
+        weights = np.asarray(weights, dtype=float)
+        weights /= weights.sum()
+        return weights
+
     threshold = 8*10**-5
     
-    model1 = GridKernelDensityEstimation(y_bottom=10500,                    # y bottom limit for the plot
-                                        y_upper=13000,                      # y upper limit for the plot
-                                        precision=200,                      # how many points per KDE
-                                        bandwidth=bandwidth,                #
-                                        outlier_threshold=threshold, 
-                                        outlier_omission=threshold*10**-2, 
-                                        aggregation_window=15, 
-                                        memory_size=300, 
-                                        min_points_for_PDF=5, 
-                                        min_aggregation_window_points_PDF=15, 
-                                        grid_size=5783)
+    model1 = PFKDE( number_of_bins=max_length,        
+                    anomaly_threshold=threshold, 
+                    omission_threshold=threshold*10**-2,
+                    minimum_points=15,
+                    aggregation_window_size=15, 
+                    memory_size=300, 
+                    bandwidth_function=bandwidth_function,
+                    weight_function=weight_function,
+                    y_bottom=10500,                         # y bottom limit for the plot
+                    y_upper=13000,                          # y upper limit for the plot
+                    precision=200)                          # how many points per KDE
 
-
-    save = True
+    save = False
     total_anomalies = [0,0,0]
     image_counter = 0
 
