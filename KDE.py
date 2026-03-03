@@ -7,8 +7,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import PowerNorm
 from matplotlib.ticker import LogFormatterMathtext, LogLocator
 
-np.random.seed(42)
-
 SAVE_PATH = "data/frames/"
 
 class AnomalyTypes(Enum):

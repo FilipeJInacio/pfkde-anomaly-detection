@@ -1,12 +1,12 @@
 import numpy as np
-import scipy.io
-import matplotlib.pyplot as plt
-from KDE import GridKernelDensityEstimation, Dataset, load_data
+from KDE import PFKDE, Dataset
+from KDE_run import load_data, add_synthetic_anomalies
 import copy
 
 
-if __name__ == "__main__":
-    def bandwidth(window):
+
+if __name__ == "__main__":    
+    def bandwidth_function(window):
         window.sort(key=lambda p: p.y)
         max_gap = max(window[i+1].y - window[i].y for i in range(len(window)-1))
         if window[-1].y == window[0].y:
@@ -15,74 +15,59 @@ if __name__ == "__main__":
         bd = 0.2 * len(window) ** (-1 / 5) * gap_factor ** 3
         return bd
 
-    print("Val;\tTP;\tFP;\tTN;\tFN;\tRecall;\tPrecision;")
-    # original list
+    def weight_function(window, center_phase, aggregation_window_size, number_of_bins):
+        weights = []
+        for point in window: 
+            d = abs(point.phase - center_phase)     # Further from center, lower the weight
+            d = min(d, number_of_bins - d)          # because of the phasefold, the end is the start and the start is the end
+            weights.append(aggregation_window_size - d + 1) 
+        weights = np.asarray(weights, dtype=float)
+        weights /= weights.sum()
+        return weights
+
+    print("Val,TP,FP,TN,FN,Recall,Precision,F1")
     values = np.array([10**-1,10**-2, 10**-3, 10**-4, 10**-5, 10**-6, 10**-7, 10**-8, 10**-9, 10**-10, 10**-11, 10**-12, 10**-13, 10**-14, 10**-15])
-    # multiply each value by 10 elements
     elements = np.array([0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1])
-    values = np.concatenate([v * elements for v in values])
+    thresholds = np.concatenate([v * elements for v in values])
 
-    list_of_points = load_data()
+    list_of_points, max_length = load_data()
+    list_of_points = add_synthetic_anomalies(list_of_points, max_length, 100, 8)
+    epochs = 50
+    save = True
 
-    for val in values:
+    for threshold in thresholds:
         dataset = Dataset(copy.deepcopy(list_of_points))
-        epochs = 50
-        test_sets = dataset/epochs # Split the test set into 90 equal parts
+        test_sets = dataset/epochs # Split the test set into 50 equal parts
+        
+        model1 = PFKDE( number_of_bins=max_length,        
+                        anomaly_threshold=threshold, 
+                        omission_threshold=threshold*10**-2,
+                        minimum_points=15,
+                        aggregation_window_size=15, 
+                        memory_size=300, 
+                        bandwidth_function=bandwidth_function,
+                        weight_function=weight_function,
+                        y_bottom=10500,                         # y bottom limit for the plot
+                        y_upper=13000,                          # y upper limit for the plot
+                        precision=200)                          # how many points per KDE
 
-        model1 = GridKernelDensityEstimation(y_bottom=10500,
-                                            y_upper=13000,
-                                            precision=200,
-                                            bandwidth=bandwidth, 
-                                            outlier_threshold=val, 
-                                            outlier_omission=val*10**-2, 
-                                            aggregation_window=15, 
-                                            memory_size=300, 
-                                            min_points_for_PDF=5, 
-                                            min_aggregation_window_points_PDF=15, 
-                                            grid_size=5783)
-
-
-        save = False
-        #total_anomalies = [0,0,0]
-
-        #model1.fit(train_set)  
-
+        total_anomalies = [0,0,0]
         image_counter = 0
-        #model1.plot_heatmap(image_counter, save=save, frame="Training Data")
-        #image_counter += 1
-
-        # model1.outlier_threshold = GridKernelDensityEstimation.parameter_fitting(model1, parameter_set, model1.outlier_threshold, scale_factor=2.0, min_value=10**-12, tolerance=1e-14, max_iter=100)
-        # model1.outlier_omission = model1.outlier_threshold * 10**-2
-
-        # model1.plot_pdf(jump=100, fig_number=image_counter, save=save)
 
         for i in range(epochs):
             model1.process_new_data(test_sets[i])
 
-
-            #model1.plot_heatmap_with_points(test_sets[i], fig_number=image_counter, save=save, frame=f"{i+1}/{epochs}")
-            #image_counter += 1
+            model1.plot_heatmap_with_points(test_sets[i], fig_number=image_counter, save=save, frame=f"{i+1}/{epochs}")
+            image_counter += 1
 
             if i == 5 or i == 11 or i == 17 or i == 23 or i == 29 or i == 35 or i == 41 or i == 47:
-                #model1.plot_heatmap_with_points(test_sets[i], fig_number=image_counter, save=save, frame=f"{i+1}/{epochs}")
                 model1.reevaluate_training_dataset(test_sets, i, fig_number=image_counter, save=save, frame=f"Reevaluation at {i+1}/{epochs}")
-                #image_counter += 1
+                image_counter += 1
 
-            # model1.pool_user_feedback(test_sets[i], frame=f"{i+1}/{epochs}")
+        model1.plot_confusion_matrix_and_heatmap(test_sets, epochs, save, image_counter, threshold)
 
-            # model1.test_criteria(frame=f"{i+1}/{epochs}")
-            # model1.synthetic_user_feedback(test_sets[i].get_point(-1).t,frame=f"{i+1}/{epochs}", num_of_points=100)
 
-            #if i == 1:
-                #model1.plot_heatmap(image_counter, save=save, frame=f"{i+1}/{epochs}")
-                #model2.plot_heatmap(image_counter, save=save, frame=f"{i+1}/{epochs}")
 
-            #total_anomalies[0] += test_sets[i].count_anomaly(AnomalyTypes.KDE_Anomaly)
-            #total_anomalies[1] += test_sets[i].count_anomaly(AnomalyTypes.KDE_Anomaly_Omitted)
-            #total_anomalies[2] += test_sets[i].count_anomaly(AnomalyTypes.KDE_NotEnoughData)
-            #print(f"Processed {i+1}/{epochs}, {test_sets[i].len} points, {test_sets[i].period_count} periods, {test_sets[i].count_anomaly(AnomalyTypes.KDE_Anomaly)} anomalies, {test_sets[i].count_anomaly(AnomalyTypes.KDE_Anomaly_Omitted)} anomalies omitted, {test_sets[i].count_anomaly(AnomalyTypes.KDE_NotEnoughData)} not enough data points")
-
-        model1.plot_confusion_matrix_and_heatmap(test_sets, epochs, save, image_counter, val)
 
 
 

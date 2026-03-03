@@ -16,7 +16,7 @@ def load_data():
     return [Point(phase[i], value[i], absolute_time[i], period_count[i], False, value[i]) for i in range(len(phase))], max_length
 
 def add_synthetic_anomalies(dataset, max_length, bin_number, k):
-
+    np.random.seed(42)
     bins = [[] for _ in range(bin_number)]
 
     # Preliminary dataset verification
@@ -106,21 +106,22 @@ if __name__ == "__main__":
                     y_upper=13000,                          # y upper limit for the plot
                     precision=200)                          # how many points per KDE
 
-    save = False
+    save = True
     total_anomalies = [0,0,0]
     image_counter = 0
 
     for i in range(epochs):
+        print(f"Epoch {i+1}/{epochs}")
         model1.process_new_data(test_sets[i])
 
         model1.plot_heatmap_with_points(test_sets[i], fig_number=image_counter, save=save, frame=f"{i+1}/{epochs}")
         image_counter += 1
 
-        if i == 5 or i == 11 or i == 17 or i == 23 or i == 29 or i == 35 or i == 41 or i == 47:
+        if (i+1)%6 == 0: # Every 6 epochs reevaluate
             model1.reevaluate_training_dataset(test_sets, i, fig_number=image_counter, save=save, frame=f"Reevaluation at {i+1}/{epochs}")
             image_counter += 1
 
-    model1.plot_confusion_matrix_and_heatmap(test_sets, epochs, save, image_counter, threshold)
+    model1.plot_confusion_matrix_and_heatmap(test_sets, save, image_counter, threshold)
 
 
 
