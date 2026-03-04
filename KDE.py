@@ -14,6 +14,11 @@ class AnomalyTypes(Enum):
     KDE_NotEnoughData = 1
     KDE_Anomaly = 2
     KDE_Anomaly_Omitted = 3
+
+class PlotStates(Enum):
+    SAVE = 1,
+    SHOW = 2
+    DONT_PLOT = 3
     
 class AnomalyEntity():
     def __init__(self, anomaly_type, context):
@@ -243,7 +248,10 @@ class PFKDE():
                     else:
                         self.update_pdf(point.phase+j-self.number_of_bins)
 
-    def plot_heatmap_with_points(self, dataset: Dataset, fig_number, save, frame):
+    def plot_heatmap_with_points(self, dataset: Dataset, fig_number, plot_state: PlotStates, frame):
+        if plot_state == PlotStates.DONT_PLOT:
+            return
+
         y_value = np.linspace(self.y_bottom, self.y_upper, self.precision)
         heatmap = np.zeros((self.precision, self.number_of_bins))
     
@@ -290,13 +298,18 @@ class PFKDE():
         plt.legend(loc="upper center", bbox_to_anchor=(0.45, 1.0))
         plt.title(f'PFKDE Heatmap, {frame}')
         plt.tight_layout()
-        if save:
+        if plot_state == PlotStates.SAVE:
             plt.savefig(SAVE_PATH + f"plot_{fig_number:04d}.png", dpi=300, bbox_inches='tight')
             plt.close()
-        else:
+        elif plot_state == PlotStates.SHOW:
             plt.show()
+        else:
+            plt.close()
     
-    def plot_pdf(self, jump, fig_number, save):
+    def plot_pdf(self, jump, fig_number, plot_state: PlotStates):
+        if plot_state == PlotStates.DONT_PLOT:
+            return
+
         y_values = np.linspace(self.y_bottom, self.y_upper, self.precision)
         
         for i, phase in enumerate(sorted(self.kde_models.keys())):
@@ -332,13 +345,15 @@ class PFKDE():
             fig.legend(loc='upper right')
             fig.tight_layout()
 
-            if save:
+            if plot_state == PlotStates.SAVE:
                 plt.savefig(SAVE_PATH + f"plot_{fig_number:04d}.png", dpi=300, bbox_inches='tight')
                 plt.close()
-            else:
+            elif plot_state == PlotStates.SHOW:
                 plt.show()
+            else:
+                plt.close()
 
-    def reevaluate_training_dataset(self, test_sets: List[Dataset], index_of_revaluation: int, fig_number: int, save: bool, frame: str):
+    def reevaluate_training_dataset(self, test_sets: List[Dataset], index_of_revaluation: int, fig_number: int, plot_state: PlotStates, frame: str):
         revaluation_points = []
 
         for index in range(index_of_revaluation+1):         # Per dataset used
@@ -370,9 +385,9 @@ class PFKDE():
         for x in range(self.number_of_bins):
             self.update_pdf(x)
 
-        self.plot_heatmap_with_points(Dataset(revaluation_points), fig_number, save, frame) # Plot with revaluation results
+        self.plot_heatmap_with_points(Dataset(revaluation_points), fig_number, plot_state, frame) # Plot with revaluation results
 
-    def plot_confusion_matrix_and_heatmap(self, test_sets: List[Dataset], save, fig_number, val):
+    def plot_confusion_matrix_and_heatmap(self, test_sets: List[Dataset], plot_state: PlotStates, fig_number, val):
         list_is_true_anomaly = []
         list_was_flagged = []
         for i in range(len(test_sets)):
@@ -396,7 +411,10 @@ class PFKDE():
         f1 = (2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0)
 
         print(f"{val:.16f},{tp},{fp},{tn},{fn},{recall:.4f},{precision:.4f},{f1:.4f}")
-        
+
+        if plot_state == PlotStates.DONT_PLOT:
+            return
+
         list_of_phases = []
         list_of_y = []
         for i in range(len(test_sets)):
@@ -444,11 +462,13 @@ class PFKDE():
         plt.title(f'Phase-Folded KDE Heatmap with Anomaly Classification Results')
         plt.tight_layout()
         
-        if save:
+        if plot_state == PlotStates.SAVE:
             plt.savefig(SAVE_PATH + f"plot_{fig_number:04d}.png", dpi=300, bbox_inches='tight')
             plt.close()
-        else:
+        elif plot_state == PlotStates.SHOW:
             plt.show()
+        else:
+            plt.close()
 
 
 def parameter_fitting(model: PFKDE, dataset: Dataset, initial_guess, scale_factor=2.0, min_value=None, max_value=None, tolerance=1e-9, max_iter=50):

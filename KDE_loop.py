@@ -1,5 +1,5 @@
 import numpy as np
-from KDE import PFKDE, Dataset
+from KDE import PFKDE, Dataset, PlotStates
 from KDE_run import load_data, add_synthetic_anomalies
 import copy
 
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     list_of_points, max_length = load_data()
     list_of_points = add_synthetic_anomalies(list_of_points, max_length, 100, 8)
     epochs = 50
-    save = True
+    plot_state = PlotStates.DONT_PLOT
 
     for threshold in thresholds:
         dataset = Dataset(copy.deepcopy(list_of_points))
@@ -57,14 +57,14 @@ if __name__ == "__main__":
         for i in range(epochs):
             model1.process_new_data(test_sets[i])
 
-            model1.plot_heatmap_with_points(test_sets[i], fig_number=image_counter, save=save, frame=f"{i+1}/{epochs}")
+            model1.plot_heatmap_with_points(test_sets[i], fig_number=image_counter, plot_state=plot_state, frame=f"{i+1}/{epochs}")
             image_counter += 1
 
-            if i == 5 or i == 11 or i == 17 or i == 23 or i == 29 or i == 35 or i == 41 or i == 47:
-                model1.reevaluate_training_dataset(test_sets, i, fig_number=image_counter, save=save, frame=f"Reevaluation at {i+1}/{epochs}")
+            if (i+1)%6 == 0:
+                model1.reevaluate_training_dataset(test_sets, i, fig_number=image_counter, plot_state=plot_state, frame=f"Reevaluation at {i+1}/{epochs}")
                 image_counter += 1
 
-        model1.plot_confusion_matrix_and_heatmap(test_sets, epochs, save, image_counter, threshold)
+        model1.plot_confusion_matrix_and_heatmap(test_sets, plot_state, image_counter, threshold)
 
 
 

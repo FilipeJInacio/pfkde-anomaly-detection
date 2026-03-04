@@ -1,4 +1,4 @@
-from KDE import PFKDE, Dataset, Point
+from KDE import PFKDE, Dataset, Point, PlotStates
 import scipy.io
 import numpy as np
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
                     y_upper=13000,                          # y upper limit for the plot
                     precision=200)                          # how many points per KDE
 
-    save = True
+    plot_state = PlotStates.SAVE
     total_anomalies = [0,0,0]
     image_counter = 0
 
@@ -114,14 +114,14 @@ if __name__ == "__main__":
         print(f"Epoch {i+1}/{epochs}")
         model1.process_new_data(test_sets[i])
 
-        model1.plot_heatmap_with_points(test_sets[i], fig_number=image_counter, save=save, frame=f"{i+1}/{epochs}")
+        model1.plot_heatmap_with_points(test_sets[i], fig_number=image_counter, plot_state=plot_state, frame=f"{i+1}/{epochs}")
         image_counter += 1
 
         if (i+1)%6 == 0: # Every 6 epochs reevaluate
-            model1.reevaluate_training_dataset(test_sets, i, fig_number=image_counter, save=save, frame=f"Reevaluation at {i+1}/{epochs}")
+            model1.reevaluate_training_dataset(test_sets, i, fig_number=image_counter, plot_state=plot_state, frame=f"Reevaluation at {i+1}/{epochs}")
             image_counter += 1
 
-    model1.plot_confusion_matrix_and_heatmap(test_sets, save, image_counter, threshold)
+    model1.plot_confusion_matrix_and_heatmap(test_sets, plot_state, image_counter, threshold)
 
 
 
