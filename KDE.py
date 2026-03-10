@@ -241,7 +241,12 @@ class PFKDE():
 
             for point in points_to_update:
                 self.bins[point.phase].append(point) # Add point to memory
+
+                # Comment/Uncomment this part depending or performance needs.
+                # self.update_pdf(point.phase)
                 # Update all points in Aggregation window range
+                #! In the paper, it only updates the KDE of the point's phase
+                #! This may add slight improvement to the cost of a huge overhead
                 for j in range(-self.aggregation_window_size, self.aggregation_window_size+1):
                     if point.phase+j < self.number_of_bins:
                         self.update_pdf(point.phase+j) # The addition of the point doesn't only affect the KDE of its own phase, but also the KDEs of the phases in the aggregation window range
