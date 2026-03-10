@@ -427,9 +427,6 @@ class PFKDE():
                 list_of_phases.append(each_point.phase)
                 list_of_y.append(each_point.y)
 
-        y_min = min(list_of_y) if min(list_of_y) < self.y_bottom else self.y_bottom  #! TEST
-        y_max = max(list_of_y) if max(list_of_y) > self.y_upper else self.y_upper   
- 
         y_value = np.linspace(self.y_bottom, self.y_upper, self.precision)
         heatmap = np.zeros((self.precision, self.number_of_bins))
     
@@ -462,7 +459,7 @@ class PFKDE():
         plt.xlabel('Phase in the orbital period [s]')
         plt.ylabel('Battery Voltage [mV]')
         plt.xlim([0, self.number_of_bins-1])
-        plt.ylim([y_min, y_max])
+        plt.ylim([self.y_bottom, self.y_upper])
         plt.legend(loc="upper center", bbox_to_anchor=(0.45, 1.0))
         plt.title(f'Phase-Folded KDE Heatmap with Anomaly Classification Results')
         plt.tight_layout()
