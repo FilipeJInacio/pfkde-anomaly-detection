@@ -19,6 +19,7 @@ This notebook is used to process the raw telemetry dataset.
 To reproduce the full pipeline from scratch:
 
 * The dataset must be obtained from **SatNOGS**
+  [https://db.satnogs.org/satellite/GPLA-1467-3987-8284-6460](https://db.satnogs.org/satellite/GPLA-1467-3987-8284-6460)
 * Alternatively, contact the author to request the processed data
 
 This notebook:
