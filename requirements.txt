@@ -1,8 +1,0 @@
-ruamel.yaml
-numpy
-matplotlib
-astropy
-sgp4
-esa-godot
-pandas
-scipy

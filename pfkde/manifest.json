@@ -1,0 +1,72 @@
+{
+    "title": "PFKDE",
+    "description": "",
+    "inputDimensionality": "multivariate",
+    "version": "1.0.0",
+    "authors": "Filipe Cravidão",
+    "language": "Python",
+    "type": "Detector",
+    "mainFile": "algorithm.py",
+    "learningType": "unsupervised",
+    "executionStep": {
+        "parameters": [
+            {
+                "name": "n_bins",
+                "type": "int",
+                "defaultValue": 5782,
+                "optional": "true",
+                "description": "The number of bins."
+            },
+            {
+                "name": "omission_threshold",
+                "type": "float",
+                "defaultValue": 8e-7,
+                "optional": "true",
+                "description": "Threshold for identifying omitted samples."
+            },
+            {
+                "name": "n_minimum_points",
+                "type": "int",
+                "defaultValue": 15,
+                "optional": "true",
+                "description": "Minimum number of points required per bin for a KDE to be computed."
+            },
+            {
+                "name": "aggregation_window_size",
+                "type": "int",
+                "defaultValue": 15,
+                "optional": "true",
+                "description": "The size of the window used for aggregating bins."
+            },
+            {
+                "name": "memory_size",
+                "type": "int",
+                "defaultValue": 300,
+                "optional": "true",
+                "description": "The size of the memory window for storing data points."
+            },
+            {
+                "name": "bandwidth_function",
+                "type": "int",
+                "defaultValue": 1,
+                "optional": "true",
+                "description": "The function used for determining the bandwidth of the KDE."
+            },
+            {
+                "name": "weight_function",
+                "type": "int",
+                "defaultValue": 1,
+                "optional": "true",
+                "description": "The function used for determining the weights of the data points in the KDE."
+            },
+            {
+                "name": "threshold_type",
+                "type": "int",
+                "defaultValue": -1,
+                "optional": "true",
+                "description": "The type of thresholding to be applied for anomaly detection. Because timeeval want raw scores, this parameter is set to -1 by default."
+            }
+        ],
+        "modelInput": "none"
+    }
+}

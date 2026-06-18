@@ -1,4 +1,3 @@
-data/*.csv
-data/*.json
-data/*.mat
-__pycache__
+results/*
+data/*
+godot/40014_TLE.json

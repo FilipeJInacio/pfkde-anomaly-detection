@@ -1,0 +1,55 @@
+[
+  {
+    "anomaly_length": {
+      "max": 2,
+      "median": 1,
+      "min": 1
+    },
+    "contamination": 0.005297806863776245,
+    "dataset_id": "Bugsat_k0.05",
+    "dimensions": 4,
+    "is_train": false,
+    "length": 154026,
+    "means": {
+      "period_index": 66189.84770103749,
+      "phase": 3377.0822718242375,
+      "timestamp_unix": 1594575970.1144612,
+      "value": 11775.15362990664
+    },
+    "num_anomalies": 778,
+    "stationarities": {
+      "period_index": "stationary",
+      "phase": "stationary",
+      "timestamp_unix": "stationary",
+      "value": "stationary"
+    },
+    "stddevs": {
+      "period_index": 3238.215690571231,
+      "phase": 2022.348162318061,
+      "timestamp_unix": 9360036.902387828,
+      "value": 390.0581070971675
+    },
+    "trends": {
+      "period_index": [
+        {
+          "coef": [
+            0.07271245930570912
+          ],
+          "confidence_r2": 0.996817765889499,
+          "tpe": "linear"
+        }
+      ],
+      "phase": [],
+      "timestamp_unix": [
+        {
+          "coef": [
+            210.17355440001813
+          ],
+          "confidence_r2": 0.99680604660821,
+          "tpe": "linear"
+        }
+      ],
+      "value": []
+    }
+  }
+]
