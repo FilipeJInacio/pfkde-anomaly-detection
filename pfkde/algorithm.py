@@ -13,7 +13,7 @@ from dataclasses import dataclass
 @dataclass
 class CustomParameters:
     n_bins: int = 5782
-    omission_threshold: float = 8*10**-7
+    omission_threshold: float = 1e-9
     n_minimum_points: int = 15
     aggregation_window_size: int = 15
     memory_size: int = 300

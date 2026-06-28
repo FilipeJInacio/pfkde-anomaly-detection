@@ -20,7 +20,7 @@
             {
                 "name": "omission_threshold",
                 "type": "float",
-                "defaultValue": 8e-7,
+                "defaultValue": 1e-9,
                 "optional": "true",
                 "description": "Threshold for identifying omitted samples."
             },

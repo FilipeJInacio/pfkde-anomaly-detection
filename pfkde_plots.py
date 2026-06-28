@@ -8,11 +8,11 @@ with open("config.json", "r") as f:
 path_to_plots = config["path_to_plots"]
 
 # from CSV import dataset
-df = pd.read_csv("timeeval-datasets/multivariate/Bugsat_k0.2/Bugsat_k0.2.test.csv")
+df = pd.read_csv("timeeval-datasets/multivariate/Bugsat/Bugsat.test.csv")
 
 # format as in the time eval
 # output (n, 4): timestamp, value, phase, period_index + (n, 1): label
-data = df[["timestamp", "value", "phase", "period_index"]].values
+data = df[["timestamp", "nice_battery_mv", "phase", "period_index"]].values
 labels = df["is_anomaly"].values
 
 # How many anomalies?
@@ -22,7 +22,7 @@ print(f"Contamination: {labels.sum() / len(labels):.8f}")
 
 model = PFKDE(
     n_bins=5782,
-    omission_threshold=10**-8,
+    omission_threshold=10**-9,
     n_minimum_points=15,
     aggregation_window_size=15,
     memory_size=300,
